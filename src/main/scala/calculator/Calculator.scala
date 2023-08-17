@@ -9,20 +9,27 @@ enum Expr:
   case Divide(a: Expr, b: Expr)
 
 object Calculator extends CalculatorInterface:
- import Expr.*
+
+  import Expr.*
 
   def computeValues(
-      namedExpressions: Map[String, Signal[Expr]]): Map[String, Signal[Double]] =
-    ???
+                     namedExpressions: Map[String, Signal[Expr]]): Map[String, Signal[Double]] =
+    namedExpressions.map((k, v) => (k, Signal(eval(v(), namedExpressions))))
 
   def eval(expr: Expr, references: Map[String, Signal[Expr]])(using Signal.Caller): Double =
-    ???
+    expr match
+      case Literal(v) => v
+      case Ref(name) => eval(getReferenceExpr(name, references), references - name)
+      case Plus(a, b) => eval(a, references) + eval(b, references)
+      case Minus(a, b) => eval(a, references) - eval(b, references)
+      case Times(a, b) => eval(a, references) * eval(b, references)
+      case Divide(a, b) => eval(a, references) / eval(b, references)
 
   /** Get the Expr for a referenced variables.
-   *  If the variable is not known, returns a literal NaN.
+   * If the variable is not known, returns a literal NaN.
    */
   private def getReferenceExpr(name: String,
-      references: Map[String, Signal[Expr]])(using Signal.Caller): Expr =
+                               references: Map[String, Signal[Expr]])(using Signal.Caller): Expr =
     references.get(name).fold[Expr] {
       Literal(Double.NaN)
     } { exprSignal =>
